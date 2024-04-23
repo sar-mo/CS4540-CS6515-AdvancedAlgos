@@ -1,0 +1,149 @@
+                        15-750 Graduate Algorithms		3/20/01
+* Approximation Algorithms
+
+======================================================================
+General Question: For problems that are NP-hard, can we perhaps in
+polynomial time guarantee a good *approximate* solution?  E.g., can we
+guarantee to find a solution that's within 10% of optimal?  Or how
+about within a factor of 2 of optimal?  Or, anything non-trivial?
+
+Interesting thing: even though all NP-complete problems are equivalent
+in terms of difficulty of finding optimal solution, the hardness or
+easyness of getting a good approximation varies all over the map.
+
+VERTEX COVER
+============
+   - Given a graph G, looking for smallest set of vertices such that
+	every edge is incident to at least one vertex in the set. 
+
+   - Example:                            +----+----+
+                                         |    |    |
+                                         +----+----+
+
+   - Can think of as: what is the fewest # of guards we need to place
+	in museum to cover all the corridors.
+
+   - This problem is NP-hard.  But it turns out it's easy to get
+        within a factor of 2.
+
+Let's start with some strategies that *don't* work.
+
+  Strawman #1: Pick arbitrary vertex with at least one uncovered edge
+	incident, put into cover, and repeat.  What would be a bad example?
+	[A: how about a star graph]
+
+  Strawman #2: how about picking the vertex that covers the *most*
+	uncovered edges.  Turns out this doesn't work either. [see hwk]
+
+How to get factor of 2.  Two easy algorithms:
+
+ Alg1:
+        Pick arbitrary edge.  We know any VC must have at least 1
+        endpt, so lets take both.  Then throw out all edges covered
+        and repeat.   Keep going until no uncovered edges left.  What
+	we've found in the end is a matching (a set of edges no two of
+	which share an endpoint) that's "maximal" (meaning that you can't add
+	any more edges to it and keep it a matching).  So, if we picked k
+	edges, our VC has size 2k, but any VC must have size at least k since
+	you need to have at least one endpoint of each of these edges.
+	[notice that we do betterif we find a smaller maximal matching]
+
+Here's another 2-approximation algorithm for Vertex Cover:
+
+ Alg2: 
+        Step1: Solve a *fractional* version of the problem.  Have a variable
+        x_i for each vertex.  Constraint 0<= x_i <= 1.  Each edge should be
+        "fractionally covered": for each edge (i,j) we want x_i+x_j >= 1.
+        Then our goal is to minimize sum_i x_i.  We can solve this using
+        linear programming.
+
+        E.g., triangle-graph.
+
+        Step2: now pick each vertex i such that x_i >= 1/2.
+
+   Claim 1: this is a VC.  Why?
+
+   Claim 2: The size of this VC is at most twice the size of the optimal
+        VC.  Why?  Because it's at most twice the value of the *fractional*
+        solution we found.  And, the size of the optimal fractional solution
+        is <= the size of the optimal integral solution (i.e., the
+        optimal VC).
+
+   Interesting fact: nobody knows any algorithm with approximation
+   ratio 1.9.  Best known is 2 - O((loglog n)/(log n)), which is 2 - o(1).
+
+   Current best hardness result: Hastad shows 7/6 - epsilon is NP-hard.
+
+
+SET-COVER
+---------
+	Given a domain X of n points, and m subsets S_1, S_2, ..., S_m of
+	these points.  Goal: find the fewest number of these subsets needed to
+	cover all the points.
+
+Set-cover is NP-hard.  It's a generalization of vertex cover (can
+anyone see how?).  In fact, it's been proven that getting an o(log n)
+approximation to the optimal solution is also NP-hard.  Luckily,
+getting O(log n) is not so bad: a simple greedy algorithm works.
+
+	Greedy Algorithm: Pick the set that covers the most points.  Throw out
+	all the points covered.  Repeat.
+	
+	What's an example where this *doesn't* find the best solution?
+	
+	Theorem: If the optimal solution uses k sets, the greedy algorithm
+	finds a solution with at most k(ln(n/k) + 1) sets. So, it is an 
+	O(log n) approximation -- or better if k is large.
+	
+Proof: Since the optimal solution uses k sets, there must some set
+	that covers at least a 1/k fraction of the points. Therefore, after
+	the first iteration of the algorithm, there are at most n(1 - 1/k)
+	points left.  After the second, there are at most n(1 - 1/k)^2 points
+	left, etc.  After k rounds, there are at most n(1 - 1/k)^k < n*(1/e)
+	points left.  After k*ln(n/k) rounds there are at most k points left.
+	So there are at most k iterations to go before we're done.
+
+Here's another algorithm: first solve the fractional version --- have
+	variable x_i for each set S_i which is allowed to be in range
+	[0,1]. For each point p, have constraint that sum of x_i's such that
+	S_i contains p must be at least 1.  Then solve.  Get a solution whose
+	total sum is some value k' (value of the optimal fractional solution)
+	which is <= k (value of the optimal integral solution).
+	Unfortunately, unlike vertex-cover, we can't just take all values > x,
+	since some point might be covered by lots of small fractions that
+	happen to sum to 1.  But, one thing we *can* do is treat fractions as
+	probabilities -- this is called randomized rounding.
+
+There are a couple ways to do randomized rounding.  Here's the one I
+	think is cleanest.  First, divide all the numbers by k' so
+	that they now all sum to 1.  Now, view this as a probability
+	distribution and make independent draws from it.   
+
+Let's fix some point p.  Sum of values on sets covering it is at
+	least 1/k'.  So, after k' draws, the probability it *hasn't* been
+	covered is at most (1 - 1/k')^k' <= 1/e.  So, expected number of
+	points still uncovered is <= n/e.  After k'*ln(n/k') draws, 
+	Pr(p is uncovered) <= k'/n, so expected number of points uncovered is
+	<= k'.  Once we have <= k' points remaining, can just be greedy and
+	cover the rest with <= k' more sets.  So, the algorithm is:
+
+	Draw k'*ln(n/k') sets from the distribution.  If > ceiling{k'} points
+	uncovered, repeat.  Else, cover remaining greedily.
+	[not hard to show that we don't expect to have to repeat too
+	many times]
+
+	==> Total number of sets is at most k'*ln(n/k') + ceiling{k'}.
+
+	So, this bound is in some sense better than the greedy algorithm
+	bound, since we replace k by k'.  
+
+Aside: the maximum ratio (OPT integral)/(OPT fractional) is often
+	called the "integrality gap".  We have shown here that the integrality
+	gap is at most log(n) since we actually *find* an integral solution
+	within log(n) of the optimal fractional.
+
+In these problems so far, rounding an LP is just an alternative way to
+get something we can get by a greedy-type algorithm.  For the problem
+below, randomized rounding of LP is the best alg we know in terms of
+apx guarantee.
+
